@@ -24,8 +24,8 @@ class Polyhedron:
   """
 
   def __init__(self, *args, **kwargs):
-    self.irredundantHRep = False # True if the H-representation is irredundant
-    self.irredundantVRep = False # True if the V-representation is irredundant
+    self.irred_hrep = False # True if the H-representation is irredundant
+    self.irred_vrep = False # True if the V-representation is irredundant
 
     self._H = np.empty((0, 1)) # Inequality description { x | H*[x; -1] <= 0 }
     self._V = np.empty((0, 0)) # Vertices of the polyhedron
@@ -121,29 +121,29 @@ class Polyhedron:
 
   @property
   def A(self):
-    if not self.hasHRep and self.hasVRep:
-      self.computeHRep()
+    if not self.has_hrep and self.has_vrep:
+      self.compute_hrep()
     return self._H[:, 0:-1].reshape(self.H.shape[0], self.dim)
 
   @property
   def b(self):
-    if not self.hasHRep and self.hasVRep:
-      self.computeHRep()
+    if not self.has_hrep and self.has_vrep:
+      self.compute_hrep()
     return self._H[:, -1].reshape(self.H.shape[0], 1)
 
   @property
   def dim(self):
-    if self.hasVRep:
+    if self.has_vrep:
       return self._V.shape[1]
-    elif self.hasHRep:
+    elif self.has_hrep:
       return self._H.shape[1]-1
     else:
       return 0
 
   @property
   def H(self):
-    if not self.hasHRep and self.hasVRep:
-      self.computeHRep()
+    if not self.has_hrep and self.has_vrep:
+      self.compute_hrep()
     return self._H
 
   @H.setter
@@ -154,11 +154,17 @@ class Polyhedron:
     self._H = np.array(H, dtype=float)
 
   @property
-  def hasHRep(self):
+  def has_hrep(self):
+    """
+    True if Polyhedron in H-representation
+    """
     return True if self._H.shape[1] > 1 else False
 
   @property
-  def hasVRep(self):
+  def has_vrep(self):
+    """
+    True if Polyhedron in V-representation
+    """
     return True if self._V.shape[1] > 0 else False
 
   # def _set_Ab(self, A, b):
@@ -203,8 +209,8 @@ class Polyhedron:
 
   @property
   def V(self):
-    if not self.hasVRep and self.hasHRep:
-      self.computeVRep()
+    if not self.has_vrep and self.has_hrep:
+      self.compute_vrep()
     return self._V
 
   @V.setter
@@ -252,22 +258,22 @@ class Polyhedron:
       if self.dim != other.dim:
         raise ValueError(f'Polyhedra must be the same dimension ({self.dim} != {other.dim})')
       else:
-        return self.minkowskiSum(other)
+        return self.minkowski_sum(other)
     elif isinstance(other, (np.ndarray, list, tuple)):
       return self.translation(other)
     else:
       raise TypeError('Right operand must be a numpy.ndarray (vector) or a Polyhedron')
 
   def __bool__(self):
-    return self.hasHRep or self.hasVRep # Return True if the polytope is not empty
+    return self.has_hrep or self.has_vrep # Return True if the polytope is not empty
 
   def __mul__(self, other):
     if isinstance(other, np.ndarray):
-      return self.invAffineMap(other)
+      return self.inv_affine_map(other)
     elif isinstance(other, (int, float)):
       return self.scaling(other)
     elif isinstance(other, Polyhedron):
-      return self.cartesianProduct(other)
+      return self.cartesian_product(other)
     else:
       raise TypeError('Right operand must be a numpy.ndarray (list), int, float, or a Polyhedron')
 
@@ -287,32 +293,32 @@ class Polyhedron:
 
   def __repr__(self):
     if self.dim == 0:
-      r = ['Empty polyhedron in R^0']
+      r = ['Empty polyhedron in R^{self.dim}']
     else:
       r = [f'Polyhedron in R^{self.dim} with representations:\n']
       r += [f'\tH-rep ']
-      if self.hasHRep:
-        r += ['(irredundant)' if self.irredundantHRep else '(redundant)  ']
+      if self.has_hrep:
+        r += ['(irredundant)' if self.irred_hrep else '(redundant)  ']
         r += [f' : Inequalities {self._H.shape[0]}\n']
       else:
-        r += ['              : Unknown (call computeHRep() to compute)\n']
+        r += ['              : Unknown (call compute_hrep() to compute)\n']
       r += [f'\tV-rep ']
-      if self.hasVRep:
-        r += ['(irredundant)' if self.irredundantVRep else '(redundant)  ']
+      if self.has_vrep:
+        r += ['(irredundant)' if self.irred_vrep else '(redundant)  ']
         r += [f' : Vertices {self._V.shape[0]}\n']
       else:
-        r += ['              : Unknown (call computeVRep() to compute)\n']
+        r += ['              : Unknown (call compute_vrep() to compute)\n']
       r += ['Functions : none']
     return ''.join(r)
 
   def __rmul__(self, other):
     """Compute the Polyhedron multiplication by a matrix or scalar as left operand
 
-    Case 1: numpy.ndarray (matrix) as left operand: call the affineMap() method
+    Case 1: numpy.ndarray (matrix) as left operand: call the affine_map() method
     Case 2: int or float (scalar) as left operand: call the scaling() method
     """
     if isinstance(other, np.ndarray):
-      return self.affineMap(other)
+      return self.affine_map(other)
     elif isinstance(other, (int, float)):
       return self.scaling(other)
     else:
@@ -327,10 +333,10 @@ class Polyhedron:
 
   def __str__(self):
     r = ['    Polyhedron with properties:\n\n']
-    r += [f'        irredundantHRep: {self.irredundantHRep}\n']
-    r += [f'        irredundantVRep: {self.irredundantVRep}\n']
-    r += [f'                hasHRep: {self.hasHRep}\n']
-    r += [f'                hasVRep: {self.hasVRep}\n']
+    r += [f'        irredundantHRep: {self.irred_hrep}\n']
+    r += [f'        irredundantVRep: {self.irred_vrep}\n']
+    r += [f'               has_hrep: {self.has_hrep}\n']
+    r += [f'               has_vrep: {self.has_vrep}\n']
     r += [f'                      A: {self._H[:, 0:-1].shape} {self._H.dtype}\n']
     r += [f'                      b: {self._H[:, -1].shape} {self._H.dtype}\n']
     r += [f'                      H: {self._H.shape} {self._H.dtype}\n']
@@ -362,7 +368,7 @@ class Polyhedron:
       if self.dim != other.dim:
         raise ValueError(f'Polyhedra must be the same dimension ({self.dim} != {other.dim})')
       else:
-        return self.pontryaginDiff(other)
+        return self.pontryagin_diff(other)
     elif isinstance(other, (np.ndarray, list, tuple)):
       return self.translation(other, substract=True)
     else:
@@ -388,7 +394,7 @@ class Polyhedron:
   #     raise ValueError('Mulitplication with numeric type other than scalar and '
   #                      'matrix not implemented')
 
-  def affineMap(self, matrix):
+  def affine_map(self, matrix):
     """Compute the affine map of the polyhedron with a matrix of size n x dim
 
     If n  < dim then this is projection
@@ -398,7 +404,7 @@ class Polyhedron:
     The output is a new polyhedron based on the affine map matrix
     """
     if not isinstance(matrix, np.ndarray):
-      raise TypeError(f'affineMap() argument must be a numpy.ndarray, not {type(matrix)}')
+      raise TypeError(f'affine_map() argument must be a numpy.ndarray, not {type(matrix)}')
     if matrix.shape[1] != self.dim:
       raise ValueError(f'The matrix defining the affine map must have {self.dim} columns.')
     if len(matrix.shape) != 2:
@@ -406,34 +412,34 @@ class Polyhedron:
     if self.dim == 0: # Empty set case
       return Polyhedron()
     # TODO: Special case: zero map?
-    if self.hasVRep: # and self.hasHRep:
+    if self.has_vrep: # and self.has_hrep:
       # self.computeVRep()
       return Polyhedron(np.matmul(self._V, matrix.T))
     else:
       return Polyhedron(np.matmul(self.A, np.linalg.inv(matrix)), self.b)
 
-  def cartesianProduct(self, poly):
+  def cartesian_product(self, poly):
     """Compute the cartesian product of the polyhedron with another polyhedron
 
     The output is (for now) just the convex hull of the result
     """
-    self.minHRep
-    poly.minHRep
+    self.min_hrep()
+    poly.min_hrep()
     return Polyhedron(np.block([[self.A, np.zeros((self.A.shape[0], self.dim))],
                                 [np.zeros((poly.A.shape[0], poly.dim)), poly.A]]),
                       np.vstack((self.b, poly.b)))
 
-  def computeHRep(self):
+  def compute_hrep(self):
     """V-rep to H-rep conversion with possibly redundant H-rep output
 
     Based on ConvexHull from scipy.spatial
     """
-    if self.hasHRep or not self.hasVRep: # Nothing to do
+    if self.has_hrep or not self.has_vrep: # Nothing to do
       return
     # elif self.isFullSpace:
     # R^n case
     # TODO
-    self.minVRep() # Working with minimal V-rep for better computation
+    self.min_vrep() # Working with minimal V-rep for better computation
     hull = ConvexHull(self.V)
     simplices = self.V[hull.simplices]
     As = np.zeros((simplices.shape[0], self.dim))
@@ -447,14 +453,14 @@ class Polyhedron:
       bs[i] = b
     self._set_H(np.hstack((As, bs)))
 
-  def computeVRep(self):
+  def compute_vrep(self):
     """H-rep to V-rep conversion with possibly redundant V-rep output
 
     Based on get_generators from cdd
     """
-    if self.hasVRep or not self.hasHRep: # Nothing to do
+    if self.has_vrep or not self.has_hrep: # Nothing to do
       return
-    self.minHRep() # Working with minimal H-rep for better computation
+    self.min_hrep() # Working with minimal H-rep for better computation
     # print("minHrep" + str(self))
     # Vertex enumeration from halfspace representation using cdd
     H = np.hstack((self.b, -self.A))  # [b, -A]
@@ -511,7 +517,7 @@ class Polyhedron:
     else:
       raise TypeError(f'intersect() argument must be a Polyhedron, not {type(poly)}')
 
-  def invAffineMap(self, matrix):
+  def inv_affine_map(self, matrix):
     """Compute the inverse affine map of the Polyhedron with a matrix of size n x dim
 
     TODO: Write this function
@@ -530,25 +536,25 @@ class Polyhedron:
     # else:
     pass # TODO: Manage H-rep case
 
-  def minHRep(self):
-    if not self.hasHRep:
-      self.computeHRep # Convert to H-rep if necessary
-    if self.irredundantHRep:
+  def min_hrep(self):
+    if not self.has_hrep:
+      self.compute_hrep() # Convert to H-rep if necessary
+    if self.irred_hrep:
       return
     # hull = ConvexHull(self.V)
     # self._set_V(self.V[hull.vertices])
     # self.irredundantVRep = True
 
-  def minVRep(self):
-    if not self.hasVRep:
-      self.computeVRep # Convert to V-rep if necessary
-    if self.irredundantVRep:
+  def min_vrep(self):
+    if not self.has_vrep:
+      self.compute_vrep() # Convert to V-rep if necessary
+    if self.irred_vrep:
       return # Nothing to do
     hull = ConvexHull(self.V)
     self.V = self.V[hull.vertices]
-    self.irredundantVRep = True
+    self.irred_vrep = True
 
-  def pontryaginDiff(self, poly):
+  def pontryagin_diff(self, poly):
     """Compute the minkowski difference of another Polyhedron with this Polyhedron
 
     # TODO
@@ -556,21 +562,21 @@ class Polyhedron:
     # See if efficient computation exists for V-rep
     """
     if not isinstance(poly, Polyhedron):
-      raise TypeError(f'pontryaginDiff() argument must be a Polyhedron, not {type(poly)}')
+      raise TypeError(f'pontryagin_diff() argument must be a Polyhedron, not {type(poly)}')
     if self == poly:
       # Warning: define == operator
       # Warning: define empty polyhedron in the same dimension
       return Polyhedron() # Special case P == S
-    self.minHRep
-    poly.minHRep
+    self.min_hrep()
+    poly.min_hrep()
     tb = np.full((self.A.shape[0], 1), np.nan)
     for i in range(0, self.A.shape[0]):
       # cProfile.run('sup = poly.support(self.A[i])')
       tb[i] = self.b[i] - poly.support(self.A[i].T)
     return Polyhedron(self.A, tb)
 
-  def minkowskiSum(self, poly):
-    if self.hasVRep and poly.hasVRep:
+  def minkowski_sum(self, poly):
+    if self.has_vrep and poly.has_vrep:
       Va = self.V
       Vb = poly.V
       if Va.shape[0] == 0:
@@ -631,16 +637,16 @@ class Polyhedron:
     """Compute the polyhedron scaling by some scalar"""
     if not isinstance(scalar, (int, float)):
       raise TypeError(f'scaling() argument must be an int or float, not {type(scalar)}')
-    if self.hasVRep:
+    if self.has_vrep:
       return Polyhedron(scalar * self.V)
-    if self.hasHRep:
+    if self.has_hrep:
       # pass # TODO: Manage H-rep case
       return Polyhedron(scalar * self.V)
       # np.hstack((self.A, scalar*self.b))
 
-  def sortVertices(self):
-    if self.hasHRep and not self.hasVRep:
-      self.computeVRep()
+  def sort_vertices(self):
+    if self.has_hrep and not self.has_vrep:
+      self.compute_vrep()
     angles = np.arctan2(self._V[:,1], self._V[:,0])
     self._V = self._V[np.argsort(angles)]
 

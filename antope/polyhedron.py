@@ -199,22 +199,29 @@ class Polyhedron:
   #   return np.sum(self.V, axis=0) / self.nV
 
   def __add__(self, other):
-    """Compute the Minkowski sum with another polyhedron or translation by vector
-    -----------------------------------------------------------------------------
-    Case 1: x is a vector of length P.Dim
+    """Compute the Minkowski sum with another polyhedron or translation by vector.
 
-    Px = P + x
+    Parameters
+    ----------
+    other : Polyhedron or np.ndarray
+        The object to be added.
 
-    Computes the Minkowski sum:
+    Returns
+    -------
+    Polyhedron
+        This Polyhedron summed with another or translated by a vector.
 
-    P+x = {x+y | y in P}
+    Raises
+    ------
+    TypeError
+        If the object to be added is neither a Polyhedron nor a vector.
+    ValueError
+        If the Polyhedra to be summed are not the same dimension.
 
-    Inputs:
-    P: polyhedron in the n-dimensional space
-    x: point in the n-dimensional space as a column vector
-
-    Returns:
-    Px - Minkowski sum of this polyhedron P and x
+    See Also
+    --------
+    minkowski_sum : Minkowski sum of Polyhedra.
+    translation : Translation of Polyhedron by a vector.
     """
     if isinstance(other, Polyhedron):
       # Polyhedra must be the same dimension for Minkowski sum
@@ -539,6 +546,25 @@ class Polyhedron:
     return Polyhedron(self.A, tb)
 
   def minkowski_sum(self, poly):
+    """Compute the Minkowski sum of another Polyhedron with this Polyhedron.
+    
+    Parameters
+    ----------
+    poly : Polyhedron
+        The other Polyhedron to be added with this Polyhedron.
+
+    Returns
+    -------
+    Polyhedron
+        This Polyhedron summed with Polyhedron poly.
+
+    Notes
+    -----
+    The Minkowski sum of :math:`\mathcal{A}` and :math:`\mathcal{B}` is defined by 
+    .. math:: \mathcal{A}\oplus\mathcal{B}=\{a+b\ |\ a\in\mathcal{A}, b\in\mathcal{B}\}
+
+    .. warning:: Minkowski sum in H-representation have not been implemented yet.
+    """
     if self.has_vrep and poly.has_vrep:
       Va = self.V
       Vb = poly.V
@@ -597,7 +623,22 @@ class Polyhedron:
   #   return h_patch # handle to the patch
 
   def scaling(self, scalar):
-    """Compute the polyhedron scaling by some scalar"""
+    """Compute the Polyhedron scaling by some scalar.
+    
+    Parameters
+    ----------
+    scalar : int or float
+        The scaling factor to scale the Polyhedron.
+
+    Returns
+    -------
+    Polyhedron
+        This Polyhedron scaled by the scalar factor.
+
+    Notes
+    -----
+    .. warning:: Scaling in H-representation have not been implemented yet.
+    """
     if not isinstance(scalar, (int, float)):
       raise TypeError(f'scaling() argument must be an int or float, not {type(scalar)}')
     if self.has_vrep:

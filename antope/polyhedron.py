@@ -36,9 +36,12 @@ class Polyhedron:
     if len(args) == 1 or any(kw in kwargs for kw in ('V', 'R')):
       if isinstance(args[0], (np.ndarray, list, tuple)):
         if 'H' in kwargs: # Polyhedron defined by H-rep
+          print('Setup H')
           self._set_H(kwargs.get('H'))
         else: # Polyhedron defined by V-rep
           self._set_V(args[0])
+      elif isinstance(args[0], (int, float)):
+        self._set_V(np.array([[args[0]]], dtype=float))
       else:
         raise TypeError('Argument must be a numpy.ndarray (list of vertices) for V-rep')
 
@@ -64,6 +67,10 @@ class Polyhedron:
 
     elif len(args) > 3:
       raise TypeError(f'Polyhedron expected at most 3 arguments, got {len(args)}')
+
+    if 'H' in kwargs:
+      # Polyhedron defined by H-rep with provided H matrix
+      self._set_H(kwargs.get('H'))
 
     # elif len(args) > 2:
     #   raise ValueError('Cannot specify V in addition to A and b')
@@ -123,13 +130,13 @@ class Polyhedron:
   def A(self):
     if not self.has_hrep and self.has_vrep:
       self.compute_hrep()
-    return self._H[:, 0:-1].reshape(self.H.shape[0], self.dim)
+    return self._H[:,:-1].reshape(self.H.shape[0], self.dim)
 
   @property
   def b(self):
     if not self.has_hrep and self.has_vrep:
       self.compute_hrep()
-    return self._H[:, -1].reshape(self.H.shape[0], 1)
+    return self._H[:,-1].reshape(self.H.shape[0], 1)
 
   @property
   def dim(self):
@@ -138,7 +145,7 @@ class Polyhedron:
     elif self.has_hrep:
       return self._H.shape[1]-1
     else:
-      return 0
+      return np.max(self._V.shape[1], self._H.shape[1]-1)
 
   @property
   def H(self):
@@ -158,54 +165,21 @@ class Polyhedron:
     """
     True if Polyhedron in H-representation
     """
-    return True if self._H.shape[1] > 1 else False
+    return True if self._H.shape[0] > 0 else False
 
   @property
   def has_vrep(self):
     """
     True if Polyhedron in V-representation
     """
-    return True if self._V.shape[1] > 0 else False
+    return True if self._V.shape[0] > 0 else False
 
-  # def _set_Ab(self, A, b):
-  #   A = np.array(A, ndmin=2)  # ndmin=2 prevents shape (n,) when m = 1
-  #   b = np.squeeze(b)[:, np.newaxis]  # overlaps with _set_b(b)
-  #   m, n = A.shape
-  #   if b.shape[0] != m:
-  #     raise ValueError(f'A has {m} rows; b has {b.shape[0]} rows!')
-  #   # For rows with b = +- inf: set a_i = 0' and b_i = +- 1 (indicates which
-  #   # direction the constraint was unbounded -- not important)
-  #   inf_rows = np.squeeze(np.isinf(b))  # True also for -np.inf
-  #   if inf_rows.any():
-  #     A[inf_rows, :] = 0
-  #     b[inf_rows] = 1 * np.sign(b[inf_rows])
-  #   self._set_A(A)
-  #   self._set_b(b)
-  #   self.n = n
-  #   if A.shape[0] and b.shape[0]:  # in_H_rep if A and b are not empty arrays
-  #     self.in_H_rep = True
-
-  # def _set_Ab_from_bounds(self, lb, ub):
-  #   A_bound = []
-  #   b_bound = []
-  #   n = np.max((lb.size, ub.size))  # 0 for bound not specified
-  #   # Test size of lb instead of "if lb" since the bool value of
-  #   # np.array(None) is False whereas np.array([]) is ambiguous. Since
-  #   # np.array(None).size is 1 and np.array([]).size is 0 (default, set
-  #   # above), lb.size > 0 implies lb was a kwarg.
-  #   if lb.size > 0:
-  #     if not lb.size == n:
-  #       raise ValueError((f'Dimension of lower bound lb is {lb.size}; '
-  #                         f'should be {n}'))
-  #     A_bound.extend(-np.eye(n))
-  #     b_bound.extend(-lb)
-  #   if ub.size > 0:
-  #     if not ub.size == n:
-  #       raise ValueError((f'Dimension of upper bound ub is f{ub.size}; '
-  #                         f'should be {n}'))
-  #     A_bound.extend(np.eye(n))
-  #     b_bound.extend(ub)
-  #     self._set_Ab(A_bound, b_bound)  # sets n and in_H_rep to True
+  @property
+  def is_empty(self):
+    """
+    True if Polyhedron is an empty set
+    """
+    return not self.has_hrep and not self.has_vrep
 
   @property
   def V(self):
@@ -223,17 +197,6 @@ class Polyhedron:
   # @property
   # def centroid(self):
   #   return np.sum(self.V, axis=0) / self.nV
-
-  # def V_sorted(self):
-  #   # Sort vertices (increasing angle: the point (x1, x2) = (1, 0) has angle 0).
-  #   # np.arctan2(y, x) returns angles in the range [-pi, pi], so vertices are
-  #   # sorted clockwise from 9:00 (angle pi). Note that the first argument is y.
-  #   # Mainly for plotting and not implemented for n != 2.
-  #   if self.n != 2:
-  #     raise  ValueError('V_sorted() not implemented for n != 2')
-  #   c = self.centroid
-  #   order = np.argsort(np.arctan2(self.V[:, 1] - c[1], self.V[:, 0] - c[0]))
-  #   return self.V[order, :]
 
   def __add__(self, other):
     """Compute the Minkowski sum with another polyhedron or translation by vector

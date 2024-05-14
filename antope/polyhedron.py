@@ -194,9 +194,12 @@ class Polyhedron:
   def _set_V(self, V):
     self._V = np.array(V, dtype=float)
 
-  # @property
-  # def centroid(self):
-  #   return np.sum(self.V, axis=0) / self.nV
+  @property
+  def centroid(self):
+    """
+    Return centroid of the Polyhedron
+    """
+    return np.sum(self.V, axis=0) / self.V.shape[0]
 
   def __add__(self, other):
     """Compute the Minkowski sum with another polyhedron or translation by vector.
@@ -651,7 +654,8 @@ class Polyhedron:
   def sort_vertices(self):
     if self.has_hrep and not self.has_vrep:
       self.compute_vrep()
-    angles = np.arctan2(self._V[:,1], self._V[:,0])
+    center = self.centroid
+    angles = np.arctan2(self._V[:,1] - center[1], self._V[:,0] - center[0])
     self._V = self._V[np.argsort(angles)]
 
   def support(self, vector):

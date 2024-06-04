@@ -77,7 +77,7 @@ def Fs(A, W, s):
         # Project the polytope on the plane (omega, Gamma)
         # F = Polyhedron('V', F.V(:,[1,2]));
         # Compute its irredundant V-representation
-        F.minVRep()
+        F.min_vrep()
         # plot(Polyhedron('V', F.V(:,[1,2])));
     return F
     

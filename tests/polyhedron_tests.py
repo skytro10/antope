@@ -30,5 +30,6 @@ class PolyhedronTestCase(unittest.TestCase):
         self.assertTrue(polyhedron_03.is_empty)
         self.assertFalse(polyhedron_03)
 
+
 if __name__ == '__main__':
     unittest.main()

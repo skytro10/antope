@@ -4,7 +4,11 @@ import cProfile
 import time
 from scipy.optimize import linprog
 from scipy.spatial import ConvexHull
+
+import matplotlib
+import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
+from matplotlib.collections import PatchCollection
 
 class Polyhedron:
   """Polyhedron object with properties
@@ -175,7 +179,7 @@ class Polyhedron:
     return True if self._V.shape[0] > 0 else False
 
   @property
-  def is_empty(self):
+  def is_empty_set(self):
     """
     True if Polyhedron is an empty set
     """
@@ -266,7 +270,7 @@ class Polyhedron:
 
   def __repr__(self):
     if self.dim == 0:
-      r = ['Empty polyhedron in R^{self.dim}']
+      r = [f'Empty polyhedron in R^{self.dim}']
     else:
       r = [f'Polyhedron in R^{self.dim} with representations:\n']
       r += [f'\tH-rep ']
@@ -621,9 +625,27 @@ class Polyhedron:
   #     h_patch.append(ax.add_patch(Polygon(V_sorted, **temp_dict)))
   #   return tuple(h_patch)  # handle(s) to the patch(es)
 
-  # def plot_basic(self, ax, **kwargs):
-  #   h_patch = ax.add_patch(Polygon(self.V_sorted(), **kwargs))
-  #   return h_patch # handle to the patch
+  def plot(self, ax, **kwargs):
+    if self.is_empty_set:
+      return
+    facecolor = kwargs.pop('color', (1,0,0))
+    self.sort_vertices()
+    polygon = Polygon(self._V, facecolor=facecolor)
+    ax.add_patch(polygon)
+    # patches = []
+    # patches.append(polygon)
+    # patch_collection = PatchCollection(patches)
+    # plt.ion()
+    # fig, ax = plt.subplots()
+    # 
+    # 
+    # patches = []
+    # patches.append(polygon)
+    # patch_collection = PatchCollection(patches)
+    # ax.add_collection(patch_collection)
+    # plt.autoscale()
+    # fig.canvas.draw_idle()
+    # fig.canvas.flush_events()
 
   def scaling(self, scalar):
     """Compute the Polyhedron scaling by some scalar.

@@ -203,7 +203,13 @@ class Polyhedron:
     """
     Return centroid of the Polyhedron
     """
+    if self.is_empty_set:
+      return
     return np.sum(self.V, axis=0) / self.V.shape[0]
+
+  @staticmethod
+  def _empty_set(dim):
+    return Polyhedron(np.zeros((0, dim)), np.zeros((0, 1)))
 
   def __add__(self, other):
     """Compute the Minkowski sum with another polyhedron or translation by vector.
